@@ -33,10 +33,16 @@ function try_place_a_bid!(market::Market, j::Int,stepno::Int,tbb::Bool, double_e
                 return #do not overbid yourself
             end
         end
-        if buyer.v[i] > seller.r+1
+
+        buyersvalue = buyer.v[i]
+        if double_ending_price_premium != nothing && buyer.ak == seller.ak && !tbb
+            buyersvalue *= (1+double_ending_price_premium)
+        end
+
+        if buyersvalue > seller.r+1
             bid = best_other_bid+1
             if double_ending_price_premium != nothing && buyer.ak == seller.ak && !tbb
-                bid = buyer.v[i]-1
+                bid = buyersvalue-1
                 if  (!(i in keys(market.double_ended_home_buyer)) ||
                         seller.bids[market.double_ended_home_buyer[i]] < bid) &&
                         !(j in values(market.double_ended_home_buyer))
@@ -46,24 +52,23 @@ function try_place_a_bid!(market::Market, j::Int,stepno::Int,tbb::Bool, double_e
 
             else
                 #bid = round(rand(Uniform(seller.r+1.,buyer.v[i])))
-                if best_other_bid+1. >= buyer.v[i]-1
-                    bid = buyer.v[i]-1
+                if best_other_bid+1. >= buyersvalue-1
+                    bid = buyersvalue-1
                 else
                     if tbb
-                        # has market info - will bid the least winning price
+                        # has market info - will bid between other bid and her value
                         #bid = max(bid,best_other_bid+1)
-                        bid = (best_other_bid+buyer.v[i])/2
-
+                        bid = round((best_other_bid+buyersvalue)/2)
                     else
                         #has no market info - will overbid
                         #bid = round(rand(Uniform(best_other_bid+1.,buyer.v[i]-1)))
-                        bid = round(rand(TriangularDist(seller.r,buyer.v[i]-1,buyer.v[i]-1)))
+                        bid = round(rand(TriangularDist(seller.r,buyersvalue-1,buyersvalue-1)))
                     end
                 end
 
             end
             #need to bid lower than the perceived property value
-            @assert bid <= buyer.v[i]
+            @assert bid <= buyersvalue
             seller.bids[j]=bid
             push!(seller.bid_history,(j,bid))
             buyer.bids[i] = bid
@@ -116,7 +121,7 @@ function try_process_sale!(market::Market, i::Int,stepno::Int,double_ending_pric
                 delete!(otherseller.bids, j)
             end
         end
-        trans = Dict{Symbol,Union{Int,Float64,Bool}}(
+        trans = Dict{Symbol,Union{Int,Float64,Bool,Missing}}(
             :step=>stepno,
             :i => i,
             :j => j,
@@ -145,18 +150,17 @@ function res_agg(resdf::AbstractDataFrame, p::MarketParams; kwargs...)
     stat_cols = [:transactions, :price, :price_v, :gain_s, :gain_b, :gain_tot,
                  :double_ended, :property_visits, :step, :step_min, :step_max]
 
-    ress = (
+    ress = [
         :TBB => resdf[resdf.tbb .& (.!resdf.allow_de),:],
         :nDE => resdf[(.!resdf.tbb) .& (.!resdf.allow_de),:],
-    )
+    ]
 
     de_df = resdf[(.!resdf.tbb) .& resdf.allow_de,:]
     de_regimes = unique(de_df.de_price_premium)
-
     for de_regime in de_regimes
-        res[Symbol("DE_$de_regime")] = de_df[de_df.de_price_premium==de_regime,:]
+        label = Symbol(string("DE_",replace(string(de_regime),'.'=>'_')))
+        push!(ress, label => de_df[de_df.de_price_premium .== de_regime,:])
     end
-
 
     rs = DataFrame()
     for (label, res) in ress
@@ -217,11 +221,11 @@ function runsims(p::MarketParams;nm=30, nN=30)
                 market = deepcopy(m_base)
                 Random.seed!(100_0000+mm);
                 res = simulate!(market,steps=60,tbb=tbb,double_ending_price_premium=double_ending_price_premium)
-                r  = Dict{Symbol,Union{Int,Float64,Bool}}(
+                r  = Dict{Symbol,Union{Int,Float64,Bool,Missing}}(
                             :m_id=>mm,
                             :N=>N,
                             :tbb=>tbb,
-                            :allow_de=>double_ending_price_premium!=0,
+                            :allow_de=>double_ending_price_premium != nothing,
                             :de_price_premium => something(double_ending_price_premium, missing),
                             :nA=>length(market.agents),
                             :nH=>length(market.homeowners),
