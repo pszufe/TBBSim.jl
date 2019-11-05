@@ -49,7 +49,6 @@ function try_place_a_bid!(market::Market, j::Int,stepno::Int,tbb::Bool, double_e
                     market.double_ended_home_buyer[i] = j
                 end
                 #double ending --> bid highest possible amount
-
             else
                 #bid = round(rand(Uniform(seller.r+1.,buyer.v[i])))
                 if best_other_bid+1. >= buyersvalue-1
