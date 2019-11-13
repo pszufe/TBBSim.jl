@@ -2,11 +2,11 @@
 
 This is a repository containig a simulation model accompying the paper:
 
-*Usurping Double-Ending Fraud in Real Estate Transactions via Blockchain Technology*
+**Usurping Double-Ending Fraud in Real Estate Transactions via Blockchain Technology**
 
-by Seung Hwan (Mark) Lee, Victoria Lemieux, Atefeh (Atty) Mashatan and Przemyslaw Szufel 
+*by Seung Hwan (Mark) Lee, Victoria Lemieux, Atefeh (Atty) Mashatan and Przemyslaw Szufel*
 
-submitted the Journal of Database Management (JDM) 
+*submitted the Journal of Database Management (JDM) *
 
 
 ## Agent Based Simulation for the Double-Ending Related Fraud
@@ -20,5 +20,15 @@ In order to run the simulation please run the following julia commnads:
 
 ```julia
 using Pkg
-Pkg.add(PackageSpec(url="https://github.com/pszufe/TBBSim.jl.git#master"))
+Pkg.add(PackageSpec(url="https://github.com/pszufe/TBBSim.jl"))
 ```
+
+Once the simulation package with its dependencies is installed get the [double_ending_sim.jl](https://raw.githubusercontent.com/pszufe/TBBSim.jl/master/experiments/double_ending_sim.jl) to actually run the simulations.
+You might want to edit the `addprocs` command in that file to pararelize the simulation over the amount of CPU cores on your machine (we recommend running the simulation on a server having at least 32 CPU/vCPU cores - in that case the simulation will take few hours to complete). Once the `addprocs` line has been edited run the command:
+```bash
+julia double_ending_sim.jl
+```
+
+
+
+
